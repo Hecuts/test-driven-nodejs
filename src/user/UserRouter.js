@@ -3,32 +3,32 @@ const UserService = require('./UserService');
 const router = express.Router();
 const { check, validationResult } = require('express-validator');
 
-// //we've to first validate the user in this middleware
-// const validateUsername = (req, res, next) => {
-//   const user = req.body;
-//   if (user.username === null) {
-//     req.validationErrors = {
-//       username: 'Username cannot be null',
-//     };
-//   }
-//   next();
-// };
-// const validationEmail = (req, res, next) => {
-//   const user = req.body;
-//   if (user.email === null) {
-//     req.validationErrors = {
-//       ...req.validationErrors,
-//       email: 'Email cannot be null',
-//     };
-//   }
-//   next();
-// };
-
 router.post(
   '/api/1.0/users',
-  check('username').notEmpty().withMessage('Username cannot be null'),
-  check('email').notEmpty().withMessage('Email cannot be null'),
-  check('password').notEmpty().withMessage('Password cannot be null'),
+  check('username')
+    .notEmpty()
+    .withMessage('Username cannot be null')
+    .bail()
+    .isLength({ min: 4, max: 32 })
+    .withMessage('Must have min 4 and max 20 characters'),
+  check('email')
+    .notEmpty()
+    .withMessage('Email cannot be null')
+    .bail()
+    .isEmail()
+    .withMessage('Email is not valid'),
+  check('password')
+    .notEmpty()
+    .withMessage('Password cannot be null')
+    .bail()
+    .isLength({ min: 6 })
+    .withMessage('Password must be at least 6 characters long')
+    .bail()
+    .matches('^(?=.*[a-z])(?=.*[A-Z])(?=.*\\d)')
+    .withMessage(
+      'Password must contain at least 1 upper case, 1 lower case and 1 number'
+    ),
+
   async (req, res) => {
     const errors = validationResult(req);
     if (!errors.isEmpty()) {
@@ -36,7 +36,6 @@ router.post(
       errors
         .array()
         .forEach((error) => (validationErrors[error.param] = error.msg));
-      // const response = { validationErrors: { ...req.validationErrors } };
       return res.status(400).send({ validationErrors: validationErrors });
     }
     await UserService.save(req.body);
